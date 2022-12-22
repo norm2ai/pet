@@ -1,0 +1,12 @@
+使用说明：
+cli.py为使用入口，以mnli任务进行PET为例，控制参数为：
+--method pet
+--pattern_ids 0 1 2 3
+--data_dir MNLI
+--model_type bert
+--model_name_or_path pre_model/bert-base-uncased
+--task_name mnli
+--output_dir output
+--do_train
+--do_eval
+即可完成训练

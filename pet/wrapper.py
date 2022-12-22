@@ -137,6 +137,7 @@ class TransformerModelWrapper:
 
     def __init__(self, config: WrapperConfig):
         """Create a new wrapper from the given config."""
+        # 类似于常规的模型定义层
         self.config = config
         config_class = MODEL_CLASSES[self.config.model_type]['config']
         tokenizer_class = MODEL_CLASSES[self.config.model_type]['tokenizer']
@@ -159,7 +160,8 @@ class TransformerModelWrapper:
         n_gpus = torch.cuda.device_count()
         if n_gpus >1:
             self.model = torch.nn.DataParallel(self.model)
-        
+
+        # 生成pvp
         self.preprocessor = PREPROCESSORS[self.config.wrapper_type](self, self.config.task_name, self.config.pattern_id,
                                                                     self.config.verbalizer_file)
         self.task_helper = TASK_HELPERS[self.config.task_name](self) if self.config.task_name in TASK_HELPERS else None

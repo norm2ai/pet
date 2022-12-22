@@ -92,20 +92,27 @@ def main():
     parser = argparse.ArgumentParser(description="Command line interface for PET/iPET")
 
     # Required parameters
+    # 训练模式参数
     parser.add_argument("--method", required=True, choices=['pet', 'ipet', 'sequence_classifier'],
                         help="The training method to use. Either regular sequence classification, PET or iPET.")
+    # 数据集
     parser.add_argument("--data_dir", default=None, type=str, required=True,
                         help="The input data dir. Should contain the data files for the task.")
+    # 使用的预模型的名称
     parser.add_argument("--model_type", default=None, type=str, required=True, choices=MODEL_CLASSES.keys(),
                         help="The type of the pretrained language model to use")
+    # 使用的预模型的路径
     parser.add_argument("--model_name_or_path", default=None, type=str, required=True,
                         help="Path to the pre-trained model or shortcut name")
+    # 任务名称："mnli",agnews"等
     parser.add_argument("--task_name", default=None, type=str, required=True, choices=PROCESSORS.keys(),
                         help="The name of the task to train/evaluate on")
+    # 保存训练好的模型和评估结果的目录名
     parser.add_argument("--output_dir", default=None, type=str, required=True,
                         help="The output directory where the model predictions and checkpoints will be written")
 
     # PET-specific optional parameters
+    # 为对应于各个PVP的PET模型设置各种参数
     parser.add_argument("--wrapper_type", default="mlm", choices=WRAPPER_TYPES,
                         help="The wrapper type. Set this to 'mlm' for a masked language model like BERT or to 'plm' "
                              "for a permuted language model like XLNet (only for PET)")
@@ -145,6 +152,7 @@ def main():
                         help="If > 0: set total number of training steps to perform in PET. Override num_train_epochs.")
 
     # SequenceClassifier-specific optional parameters (also used for the final PET classifier)
+    # 为最终序列分类模型设置各种参数
     parser.add_argument("--sc_repetitions", default=1, type=int,
                         help="The number of times to repeat seq. classifier training and testing with different seeds.")
     parser.add_argument("--sc_max_seq_length", default=256, type=int,
@@ -166,6 +174,7 @@ def main():
                              "Override num_train_epochs.")
 
     # iPET-specific optional parameters
+    # 为iPET设置各种参数
     parser.add_argument("--ipet_generations", default=3, type=int,
                         help="The number of generations to train (only for iPET)")
     parser.add_argument("--ipet_logits_percentage", default=0.25, type=float,
@@ -177,6 +186,7 @@ def main():
                              "if their predicted label is different (only for iPET)")
 
     # Other optional parameters
+    # 通用参数
     parser.add_argument("--train_examples", default=-1, type=int,
                         help="The total number of train examples to use, where -1 equals all examples.")
     parser.add_argument("--test_examples", default=-1, type=int,
@@ -229,6 +239,7 @@ def main():
     args.task_name = args.task_name.lower()
     if args.task_name not in PROCESSORS:
         raise ValueError("Task '{}' not found".format(args.task_name))
+    # 生成对应任务处理器
     processor = PROCESSORS[args.task_name]()
     args.label_list = processor.get_labels()
 
@@ -238,22 +249,22 @@ def main():
         train_ex_per_label = eq_div(args.train_examples, len(args.label_list)) if args.train_examples != -1 else -1
         test_ex_per_label = eq_div(args.test_examples, len(args.label_list)) if args.test_examples != -1 else -1
         train_ex, test_ex = None, None
-
+    # 定义验证集
     eval_set = TEST_SET if args.eval_set == 'test' else DEV_SET
-
+    # 根据相应任务加载数据
     train_data = load_examples(
         args.task_name, args.data_dir, TRAIN_SET, num_examples=train_ex, num_examples_per_label=train_ex_per_label)
     eval_data = load_examples(
         args.task_name, args.data_dir, eval_set, num_examples=test_ex, num_examples_per_label=test_ex_per_label)
     unlabeled_data = load_examples(
         args.task_name, args.data_dir, UNLABELED_SET, num_examples=args.unlabeled_examples)
-
+    # 加载评测指标
     args.metrics = METRICS.get(args.task_name, DEFAULT_METRICS)
 
     pet_model_cfg, pet_train_cfg, pet_eval_cfg = load_pet_configs(args)
     sc_model_cfg, sc_train_cfg, sc_eval_cfg = load_sequence_classifier_configs(args)
     ipet_cfg = load_ipet_config(args)
-
+    # 进入modeling.py文件进行训练
     if args.method == 'pet':
         pet.train_pet(pet_model_cfg, pet_train_cfg, pet_eval_cfg, sc_model_cfg, sc_train_cfg, sc_eval_cfg,
                       pattern_ids=args.pattern_ids, output_dir=args.output_dir,

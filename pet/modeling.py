@@ -179,6 +179,7 @@ def train_ipet(ensemble_model_config: WrapperConfig, ensemble_train_config: Trai
         gen_output_dir = os.path.join(output_dir, f'g{gen}')
 
         # Step 1: Train an ensemble of models corresponding to individual patterns
+        # 第一步：训练得到与独立的模型匹配的集成模型
         ipet_data_dir = os.path.join(output_dir, f'g{gen - 1}', 'next-gen-train-data') if gen > 0 else None
         train_pet_ensemble(ensemble_model_config, ensemble_train_config, ensemble_eval_config, pattern_ids,
                            gen_output_dir, ipet_data_dir=ipet_data_dir,
@@ -186,6 +187,7 @@ def train_ipet(ensemble_model_config: WrapperConfig, ensemble_train_config: Trai
                            eval_data=eval_data, do_train=do_train, do_eval=do_eval, save_unlabeled_logits=True)
 
         # Step 2: Use the model to annotate examples for the next generation
+        # 第二步：使用模型为之后迭代作注释
         original_data_size = len(train_data) if train_data else 10 / ipet_config.scale_factor
         num_new_examples = int(original_data_size * (ipet_config.scale_factor ** (gen + 1)) - len(train_data))
         generate_ipet_train_sets(train_data=train_data, unlabeled_data=unlabeled_data,
@@ -195,6 +197,7 @@ def train_ipet(ensemble_model_config: WrapperConfig, ensemble_train_config: Trai
                                  n_most_likely=ipet_config.n_most_likely if gen == 0 else -1, seed=seed)
 
     # Step 3: Merge the annotations created by each individual model
+    # 第三步：合并模型
     logits_dir = os.path.join(output_dir, f'g{ipet_config.generations - 1}')
     logits_file = os.path.join(logits_dir, 'unlabeled_logits.txt')
     merge_logits(logits_dir, logits_file, reduction)
@@ -205,6 +208,7 @@ def train_ipet(ensemble_model_config: WrapperConfig, ensemble_train_config: Trai
         example.logits = example_logits
 
     # Step 4: Train the final sequence classifier model
+    # 第四步：训练最终的分类器
     final_model_config.wrapper_type = SEQUENCE_CLASSIFIER_WRAPPER
     final_train_config.use_logits = True
 
@@ -241,7 +245,7 @@ def train_pet(ensemble_model_config: WrapperConfig, ensemble_train_config: Train
     :param no_distillation: if true, no distillation is performed
     :param seed: the random seed to use
     """
-
+    # 第一步：训练得到与独立的模型匹配的集成模型
     # Step 1: Train an ensemble of models corresponding to individual patterns
     train_pet_ensemble(ensemble_model_config, ensemble_train_config, ensemble_eval_config, pattern_ids, output_dir,
                        repetitions=ensemble_repetitions, train_data=train_data, unlabeled_data=unlabeled_data,
@@ -252,6 +256,7 @@ def train_pet(ensemble_model_config: WrapperConfig, ensemble_train_config: Train
         return
 
     # Step 2: Merge the annotations created by each individual model
+    # 第二步 合并模型
     logits_file = os.path.join(output_dir, 'unlabeled_logits.txt')
     merge_logits(output_dir, logits_file, reduction)
     logits = LogitsList.load(logits_file).logits
@@ -261,6 +266,7 @@ def train_pet(ensemble_model_config: WrapperConfig, ensemble_train_config: Train
         example.logits = example_logits
 
     # Step 3: Train the final sequence classifier model
+    # 第三步 训练最终的分类器
     final_model_config.wrapper_type = SEQUENCE_CLASSIFIER_WRAPPER
     final_train_config.use_logits = True
 
@@ -323,6 +329,7 @@ def train_pet_ensemble(model_config: WrapperConfig, train_config: TrainConfig, e
     results = defaultdict(lambda: defaultdict(list))
     set_seed(seed)
 
+    # 遍历每一个pattern
     for pattern_id in pattern_ids:
         for iteration in range(repetitions):
 
@@ -338,6 +345,7 @@ def train_pet_ensemble(model_config: WrapperConfig, train_config: TrainConfig, e
             if not os.path.exists(pattern_iter_output_dir):
                 os.makedirs(pattern_iter_output_dir)
 
+            # 初始化模型
             wrapper = init_model(model_config)
 
             # Training
@@ -429,7 +437,7 @@ def train_single_model(model: TransformerModelWrapper, train_data: List[InputExa
     results_dict = {}
 
     model.model.to(device)
-
+    # 测试模型
     if train_data and return_train_set_results:
         results_dict['train_set_before_training'] = evaluate(model, train_data, eval_config)['scores']['acc']
 
