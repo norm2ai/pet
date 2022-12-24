@@ -245,7 +245,7 @@ def train_pet(ensemble_model_config: WrapperConfig, ensemble_train_config: Train
     :param no_distillation: if true, no distillation is performed
     :param seed: the random seed to use
     """
-    # 第一步：训练得到与独立的模型匹配的集成模型
+    # 第一步：训练得到与独立的模型匹配的集成模型，并输出独立的logits
     # Step 1: Train an ensemble of models corresponding to individual patterns
     train_pet_ensemble(ensemble_model_config, ensemble_train_config, ensemble_eval_config, pattern_ids, output_dir,
                        repetitions=ensemble_repetitions, train_data=train_data, unlabeled_data=unlabeled_data,
@@ -256,7 +256,7 @@ def train_pet(ensemble_model_config: WrapperConfig, ensemble_train_config: Train
         return
 
     # Step 2: Merge the annotations created by each individual model
-    # 第二步 合并模型
+    # 第二步 集成模型，合并logits
     logits_file = os.path.join(output_dir, 'unlabeled_logits.txt')
     merge_logits(output_dir, logits_file, reduction)
     logits = LogitsList.load(logits_file).logits
